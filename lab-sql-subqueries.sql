@@ -86,8 +86,50 @@ WHERE a.actor_id = (
 /* 7. Films rented by most profitable customer. You can use the customer table and payment table to find 
 the most profitable customer ie the customer that has made the largest sum of payments*/
 
+-- Using joins
+SELECT DISTINCT(title) FROM film AS f
+JOIN inventory AS i ON f.film_id = i.film_id
+JOIN rental AS r ON r.inventory_id = i.inventory_id
+WHERE customer_id = (
+	SELECT customer_id
+	FROM payment
+	GROUP BY customer_id
+	ORDER BY SUM(amount) DESC
+	LIMIT 1)
+ORDER BY title;
 
-
+-- Using only subqueries
+SELECT title
+FROM film
+WHERE film_id IN (
+    SELECT film_id
+    FROM inventory
+    WHERE inventory_id IN (
+        SELECT inventory_id
+        FROM rental
+        WHERE customer_id = (
+                SELECT customer_id
+                FROM payment
+                GROUP BY customer_id
+                ORDER BY SUM(amount) DESC
+                LIMIT 1
+            )
+        )
+	)
+ORDER BY title;
 
 /* 8. Get the client_id and the total_amount_spent of those clients who spent more than the average of the 
 total_amount spent by each client.*/ 
+
+SELECT customer_id, SUM(amount) AS total_spent
+FROM payment
+GROUP BY customer_id
+HAVING SUM(amount) > (
+    SELECT AVG(total_amount)
+    FROM (
+        SELECT customer_id, SUM(amount) AS total_amount
+        FROM payment
+        GROUP BY customer_id
+    ) s1
+)
+ORDER BY total_spent;
